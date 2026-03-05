@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract CoffeeTracker is ERC1155, AccessControl{
     bytes32 public constant FARMER_ROLE = keccak256("FARMER_ROLE");
     bytes32 public constant PROCESSOR_ROLE = keccak256("PROCESSOR_ROLE");
-    bytes32 public constant MILLER_ROLE = keccak256("MILLER_ROLE");
     bytes32 public constant ROASTER_ROLE = keccak256("ROASTER_ROLE");
     bytes32 public constant DISTRIBUTOR_ROLE = keccak256("DISTRIBUTOR_ROLE");
 
@@ -20,7 +19,8 @@ contract CoffeeTracker is ERC1155, AccessControl{
         Puna,
         Hamakua,
         Maui,
-        Kauai
+        Kauai,
+        Other
     }
 
     enum Variety {
@@ -40,7 +40,22 @@ contract CoffeeTracker is ERC1155, AccessControl{
         Natural,
         Washed,
         Honey,
-        Anaerobic
+        Anaerobic,
+        Other
+    }
+
+    enum RoastingMethod {
+        Drum,
+        HotAir,
+        FluidBed,
+        Other
+    }
+
+    enum RoastLevel {
+        Light,
+        Medium,
+        Dark,
+        Other
     }
 
     struct CoffeeBatch {
@@ -54,37 +69,43 @@ contract CoffeeTracker is ERC1155, AccessControl{
         address farmer;
         string farmName;
         Region region;
-        uint256 elevation;
         Variety variety;
+        uint16 elevation;
         uint256 harvestWeight;
         uint256 harvestDate;
 
         // Processing
+        address processor;
         ProcessingMethod processingMethod;
-        uint256 moistureContent;
-        uint256 scaScore;
-
-        // Milling
-        uint256 millWeight;
+        uint256 processingBeforeWeight;
+        uint256 processingAfterWeight;
+        uint8 moistureContent;
+        uint8 scaScore;
+        uint8 humidity;
+        uint16 dryTemperature;
 
         // Roasting
-        uint256 roastingWeight;
+        address roaster;
+        RoastingMethod roastingMethod;
+        uint256 roastingBeforeWeight;
+        uint256 roastingAfterWeight;
+        RoastLevel roastLevel;
+        uint16 transportTime;
     }
 
     mapping(uint256 => CoffeeBatch) private batches;
+    mapping(address => uint256[]) private userBatches;
 
     constructor(
         address admin,
         address farmer,
         address processor,
-        address miller,
         address roaster,
         address distributor
-    ) ERC1155("https://gray-selected-condor-526.mypinata.cloud/ipfs/bafybeihm357xwzj5casusvs4qaxxxnl2jjlnxmnvczfrdwi75vu7nkfqru/{id}.json") {
+    ) ERC1155("") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(FARMER_ROLE, farmer);
         _grantRole(PROCESSOR_ROLE, processor);
-        _grantRole(MILLER_ROLE, miller);
         _grantRole(ROASTER_ROLE, roaster);
         _grantRole(DISTRIBUTOR_ROLE, distributor);
     }
@@ -92,29 +113,36 @@ contract CoffeeTracker is ERC1155, AccessControl{
     event Harvested(
         uint256 indexed batchId,
         string batchNumber,
+        address indexed farmer,
+        string farmName,
         Region region,
         Variety variety,
-        address indexed farmer
+        uint16 elevation,
+        uint256 harvestWeight,
+        uint256 harvestDate
     );
 
     event Processed(
         uint256 indexed batchId,
+        address indexed processor,
         ProcessingMethod processingMethod,
-        uint256 moistureContent,
-        address indexed processor
-    );
-
-    event Milled(
-        uint256 indexed batchId,
-        uint256 millWeight,
-        address indexed miller
+        uint256 processingBeforeWeight,
+        uint256 processingAfterWeight,
+        uint8 moistureContent,
+        uint8 scaScore,
+        uint8 humidity,
+        uint16 dryTemperature
     );
 
     event Roasted(
         uint256 indexed batchId,
-        uint256 roastingWeight,
-        uint256 scaScore,
-        address indexed roaster
+        address indexed roaster,
+        RoastingMethod roastingMethod,
+        uint256 roastingBeforeWeight,
+        uint256 roastingAfterWeight,
+        RoastLevel roastLevel,
+        uint16 transportTime
+
     );
 
     event Distributed(
@@ -131,8 +159,8 @@ contract CoffeeTracker is ERC1155, AccessControl{
         string memory _batchNumber,
         string memory _farmName,
         Region _region,
-        uint256 _elevation,
         Variety _variety,
+        uint16 _elevation,
         uint256 _harvestWeight,
         uint256 _harvestDate
     ) public onlyRole(FARMER_ROLE) {
@@ -147,25 +175,41 @@ contract CoffeeTracker is ERC1155, AccessControl{
             farmer: msg.sender,
             farmName: _farmName,
             region: _region,
-            elevation: _elevation,
             variety: _variety,
+            elevation: _elevation,
             harvestWeight: _harvestWeight,
             harvestDate: _harvestDate,
 
-            processingMethod: ProcessingMethod.Natural,
+            processor: address(0),
+            processingMethod: ProcessingMethod.Other,
+            processingBeforeWeight: 0,
+            processingAfterWeight: 0,
             moistureContent: 0,
             scaScore: 0,
-            millWeight: 0,
-            roastingWeight: 0
+            humidity: 0,
+            dryTemperature: 0,
+
+            roaster: address(0),
+            roastingMethod: RoastingMethod.Other,
+            roastingBeforeWeight: 0,
+            roastingAfterWeight: 0,
+            roastLevel: RoastLevel.Other,
+            transportTime: 0
         });
 
         emit Harvested(
             _batchId,
             _batchNumber,
+            msg.sender,
+            _farmName,
             _region,
             _variety,
-            msg.sender
+            _elevation,
+            _harvestWeight,
+            _harvestDate
         );
+
+        userBatches[msg.sender].push(_batchId);
 
         _mint(msg.sender, _batchId, 1, "");
 
@@ -175,54 +219,75 @@ contract CoffeeTracker is ERC1155, AccessControl{
     function processBatch(
         uint256 _batchId,
         ProcessingMethod _processingMethod,
-        uint256 _moistureContent
+        uint256 _processingBeforeWeight,
+        uint256 _processingAfterWeight,
+        uint8 _moistureContent,
+        uint8 _scaScore,
+        uint8 _humidity,
+        uint16 _dryTemperature
     ) public onlyRole(PROCESSOR_ROLE) {
         CoffeeBatch storage batch = batches[_batchId];
         require(batch.batchId != 0, "This coffee batch doesn't exist!");
+        require(batch.processor == address(0) || batch.processor == msg.sender, "This coffee batch is already processed by another processor!");
 
+        if (batch.processor == address(0)) {
+            userBatches[msg.sender].push(_batchId);
+        }
+
+        batch.processor = msg.sender;
         batch.processingMethod = _processingMethod;
+        batch.processingBeforeWeight = _processingBeforeWeight;
+        batch.processingAfterWeight = _processingAfterWeight;
         batch.moistureContent = _moistureContent;
+        batch.scaScore = _scaScore;
+        batch.humidity = _humidity;
+        batch.dryTemperature = _dryTemperature;
 
         emit Processed(
             _batchId,
+            msg.sender,
             _processingMethod,
+            _processingBeforeWeight,
+            _processingAfterWeight,
             _moistureContent,
-            msg.sender
-        );
-    }
-
-    function millBatch(
-        uint256 _batchId,
-        uint256 _millWeight
-    ) public onlyRole(MILLER_ROLE) {
-        CoffeeBatch storage batch = batches[_batchId];
-        require(batch.batchId != 0, "This coffee batch doesn't exist!");
-
-        batch.millWeight = _millWeight;
-
-        emit Milled(
-            _batchId,
-            _millWeight,
-            msg.sender
+            _scaScore,
+            _humidity,
+            _dryTemperature
         );
     }
 
     function roastBatch(
         uint256 _batchId,
-        uint256 _roastingWeight,
-        uint256 _scaScore
+        RoastingMethod _roastingMethod,
+        uint256 _roastingBeforeWeight,
+        uint256 _roastingAfterWeight,
+        RoastLevel _roastLevel,
+        uint16 _transportTime
     ) public onlyRole(ROASTER_ROLE) {
         CoffeeBatch storage batch = batches[_batchId];
         require(batch.batchId != 0, "This coffee batch doesn't exist!");
+        require(batch.processor != address(0), "This coffee batch must be processed before roasting!");
+        require(batch.roaster == address(0) || batch.roaster == msg.sender, "This coffee batch is already roasted by another roaster!");
 
-        batch.roastingWeight = _roastingWeight;
-        batch.scaScore = _scaScore;
+        if (batch.roaster == address(0)) {
+            userBatches[msg.sender].push(_batchId);
+        }
+
+        batch.roaster = msg.sender;
+        batch.roastingMethod = _roastingMethod;
+        batch.roastingBeforeWeight = _roastingBeforeWeight;
+        batch.roastingAfterWeight = _roastingAfterWeight;
+        batch.roastLevel = _roastLevel;
+        batch.transportTime = _transportTime;
 
         emit Roasted(
             _batchId,
-            _roastingWeight,
-            _scaScore,
-            msg.sender
+            msg.sender,
+            _roastingMethod,
+            _roastingBeforeWeight,
+            _roastingAfterWeight,
+            _roastLevel,
+            _transportTime
         );
     }
 
@@ -231,6 +296,7 @@ contract CoffeeTracker is ERC1155, AccessControl{
     ) public onlyRole(DISTRIBUTOR_ROLE) {
         CoffeeBatch storage batch = batches[_batchId];
         require(batch.batchId != 0, "This coffee batch doesn't exist!");
+        require(batch.roaster != address(0), "This coffee batch must be roasted before distribution!");
 
         emit Distributed(
             _batchId,
@@ -254,6 +320,27 @@ contract CoffeeTracker is ERC1155, AccessControl{
     function getBatch(uint256 _batchId) public view returns (CoffeeBatch memory) {
         require(batches[_batchId].batchId != 0, "This coffee batch doesn't exist!");
         return batches[_batchId];
+    }
+
+    function getUserBatches(address user) public view returns (string memory userRole, CoffeeBatch[] memory history) {
+        userRole = getRole(user);
+        uint256[] memory ids = userBatches[user];
+        history = new CoffeeBatch[](ids.length);
+        
+        for (uint256 i = 0; i < ids.length; i++) {
+            history[i] = batches[ids[i]];
+        }
+
+        return (userRole, history);
+    }
+
+    function getRole(address account) public view returns (string memory) {
+        if (hasRole(DEFAULT_ADMIN_ROLE, account)) return "Admin";
+        if (hasRole(FARMER_ROLE, account)) return "Farmer";
+        if (hasRole(PROCESSOR_ROLE, account)) return "Processor";
+        if (hasRole(ROASTER_ROLE, account)) return "Roaster";
+        if (hasRole(DISTRIBUTOR_ROLE, account)) return "Distributor";
+        return "User";
     }
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC1155, AccessControl) returns (bool) {

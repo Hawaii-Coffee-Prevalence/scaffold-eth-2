@@ -13,7 +13,7 @@ const deployCoffeeTracker: DeployFunction = async function (hre: HardhatRuntimeE
 
   const deployment = await deploy("CoffeeTracker", {
     from: deployer,
-    args: [adminAddress, trustedAddress, trustedAddress, trustedAddress, trustedAddress, trustedAddress],
+    args: [adminAddress, trustedAddress, trustedAddress, trustedAddress, trustedAddress],
     log: true,
   });
 

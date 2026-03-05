@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     CoffeeTracker: {
-      address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      address: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
       abi: [
         {
           inputs: [
@@ -24,11 +24,6 @@ const deployedContracts = {
             {
               internalType: "address",
               name: "processor",
-              type: "address",
-            },
-            {
-              internalType: "address",
-              name: "miller",
               type: "address",
             },
             {
@@ -228,6 +223,18 @@ const deployedContracts = {
               type: "string",
             },
             {
+              indexed: true,
+              internalType: "address",
+              name: "farmer",
+              type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "string",
+              name: "farmName",
+              type: "string",
+            },
+            {
               indexed: false,
               internalType: "enum CoffeeTracker.Region",
               name: "region",
@@ -240,10 +247,22 @@ const deployedContracts = {
               type: "uint8",
             },
             {
-              indexed: true,
-              internalType: "address",
-              name: "farmer",
-              type: "address",
+              indexed: false,
+              internalType: "uint16",
+              name: "elevation",
+              type: "uint16",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "harvestWeight",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "harvestDate",
+              type: "uint256",
             },
           ],
           name: "Harvested",
@@ -259,29 +278,10 @@ const deployedContracts = {
               type: "uint256",
             },
             {
-              indexed: false,
-              internalType: "uint256",
-              name: "millWeight",
-              type: "uint256",
-            },
-            {
               indexed: true,
               internalType: "address",
-              name: "miller",
+              name: "processor",
               type: "address",
-            },
-          ],
-          name: "Milled",
-          type: "event",
-        },
-        {
-          anonymous: false,
-          inputs: [
-            {
-              indexed: true,
-              internalType: "uint256",
-              name: "batchId",
-              type: "uint256",
             },
             {
               indexed: false,
@@ -292,14 +292,38 @@ const deployedContracts = {
             {
               indexed: false,
               internalType: "uint256",
-              name: "moistureContent",
+              name: "processingBeforeWeight",
               type: "uint256",
             },
             {
-              indexed: true,
-              internalType: "address",
-              name: "processor",
-              type: "address",
+              indexed: false,
+              internalType: "uint256",
+              name: "processingAfterWeight",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint8",
+              name: "moistureContent",
+              type: "uint8",
+            },
+            {
+              indexed: false,
+              internalType: "uint8",
+              name: "scaScore",
+              type: "uint8",
+            },
+            {
+              indexed: false,
+              internalType: "uint8",
+              name: "humidity",
+              type: "uint8",
+            },
+            {
+              indexed: false,
+              internalType: "uint16",
+              name: "dryTemperature",
+              type: "uint16",
             },
           ],
           name: "Processed",
@@ -315,22 +339,40 @@ const deployedContracts = {
               type: "uint256",
             },
             {
-              indexed: false,
-              internalType: "uint256",
-              name: "roastingWeight",
-              type: "uint256",
-            },
-            {
-              indexed: false,
-              internalType: "uint256",
-              name: "scaScore",
-              type: "uint256",
-            },
-            {
               indexed: true,
               internalType: "address",
               name: "roaster",
               type: "address",
+            },
+            {
+              indexed: false,
+              internalType: "enum CoffeeTracker.RoastingMethod",
+              name: "roastingMethod",
+              type: "uint8",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "roastingBeforeWeight",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "uint256",
+              name: "roastingAfterWeight",
+              type: "uint256",
+            },
+            {
+              indexed: false,
+              internalType: "enum CoffeeTracker.RoastLevel",
+              name: "roastLevel",
+              type: "uint8",
+            },
+            {
+              indexed: false,
+              internalType: "uint16",
+              name: "transportTime",
+              type: "uint16",
             },
           ],
           name: "Roasted",
@@ -564,19 +606,6 @@ const deployedContracts = {
         },
         {
           inputs: [],
-          name: "MILLER_ROLE",
-          outputs: [
-            {
-              internalType: "bytes32",
-              name: "",
-              type: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-          type: "function",
-        },
-        {
-          inputs: [],
           name: "PROCESSOR_ROLE",
           outputs: [
             {
@@ -710,14 +739,14 @@ const deployedContracts = {
                   type: "uint8",
                 },
                 {
-                  internalType: "uint256",
-                  name: "elevation",
-                  type: "uint256",
-                },
-                {
                   internalType: "enum CoffeeTracker.Variety",
                   name: "variety",
                   type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "elevation",
+                  type: "uint16",
                 },
                 {
                   internalType: "uint256",
@@ -730,34 +759,98 @@ const deployedContracts = {
                   type: "uint256",
                 },
                 {
+                  internalType: "address",
+                  name: "processor",
+                  type: "address",
+                },
+                {
                   internalType: "enum CoffeeTracker.ProcessingMethod",
                   name: "processingMethod",
                   type: "uint8",
                 },
                 {
                   internalType: "uint256",
+                  name: "processingBeforeWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "processingAfterWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint8",
                   name: "moistureContent",
-                  type: "uint256",
+                  type: "uint8",
                 },
                 {
-                  internalType: "uint256",
+                  internalType: "uint8",
                   name: "scaScore",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint8",
+                  name: "humidity",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "dryTemperature",
+                  type: "uint16",
+                },
+                {
+                  internalType: "address",
+                  name: "roaster",
+                  type: "address",
+                },
+                {
+                  internalType: "enum CoffeeTracker.RoastingMethod",
+                  name: "roastingMethod",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint256",
+                  name: "roastingBeforeWeight",
                   type: "uint256",
                 },
                 {
                   internalType: "uint256",
-                  name: "millWeight",
+                  name: "roastingAfterWeight",
                   type: "uint256",
                 },
                 {
-                  internalType: "uint256",
-                  name: "roastingWeight",
-                  type: "uint256",
+                  internalType: "enum CoffeeTracker.RoastLevel",
+                  name: "roastLevel",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "transportTime",
+                  type: "uint16",
                 },
               ],
               internalType: "struct CoffeeTracker.CoffeeBatch",
               name: "",
               type: "tuple",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "account",
+              type: "address",
+            },
+          ],
+          name: "getRole",
+          outputs: [
+            {
+              internalType: "string",
+              name: "",
+              type: "string",
             },
           ],
           stateMutability: "view",
@@ -777,6 +870,157 @@ const deployedContracts = {
               internalType: "bytes32",
               name: "",
               type: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+          type: "function",
+        },
+        {
+          inputs: [
+            {
+              internalType: "address",
+              name: "user",
+              type: "address",
+            },
+          ],
+          name: "getUserBatches",
+          outputs: [
+            {
+              internalType: "string",
+              name: "userRole",
+              type: "string",
+            },
+            {
+              components: [
+                {
+                  internalType: "uint256",
+                  name: "batchId",
+                  type: "uint256",
+                },
+                {
+                  internalType: "string",
+                  name: "batchNumber",
+                  type: "string",
+                },
+                {
+                  internalType: "bool",
+                  name: "verified",
+                  type: "bool",
+                },
+                {
+                  internalType: "uint256",
+                  name: "mintTimestamp",
+                  type: "uint256",
+                },
+                {
+                  internalType: "address",
+                  name: "farmer",
+                  type: "address",
+                },
+                {
+                  internalType: "string",
+                  name: "farmName",
+                  type: "string",
+                },
+                {
+                  internalType: "enum CoffeeTracker.Region",
+                  name: "region",
+                  type: "uint8",
+                },
+                {
+                  internalType: "enum CoffeeTracker.Variety",
+                  name: "variety",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "elevation",
+                  type: "uint16",
+                },
+                {
+                  internalType: "uint256",
+                  name: "harvestWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "harvestDate",
+                  type: "uint256",
+                },
+                {
+                  internalType: "address",
+                  name: "processor",
+                  type: "address",
+                },
+                {
+                  internalType: "enum CoffeeTracker.ProcessingMethod",
+                  name: "processingMethod",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint256",
+                  name: "processingBeforeWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "processingAfterWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint8",
+                  name: "moistureContent",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint8",
+                  name: "scaScore",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint8",
+                  name: "humidity",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "dryTemperature",
+                  type: "uint16",
+                },
+                {
+                  internalType: "address",
+                  name: "roaster",
+                  type: "address",
+                },
+                {
+                  internalType: "enum CoffeeTracker.RoastingMethod",
+                  name: "roastingMethod",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint256",
+                  name: "roastingBeforeWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "uint256",
+                  name: "roastingAfterWeight",
+                  type: "uint256",
+                },
+                {
+                  internalType: "enum CoffeeTracker.RoastLevel",
+                  name: "roastLevel",
+                  type: "uint8",
+                },
+                {
+                  internalType: "uint16",
+                  name: "transportTime",
+                  type: "uint16",
+                },
+              ],
+              internalType: "struct CoffeeTracker.CoffeeBatch[]",
+              name: "history",
+              type: "tuple[]",
             },
           ],
           stateMutability: "view",
@@ -818,14 +1062,14 @@ const deployedContracts = {
               type: "uint8",
             },
             {
-              internalType: "uint256",
-              name: "_elevation",
-              type: "uint256",
-            },
-            {
               internalType: "enum CoffeeTracker.Variety",
               name: "_variety",
               type: "uint8",
+            },
+            {
+              internalType: "uint16",
+              name: "_elevation",
+              type: "uint16",
             },
             {
               internalType: "uint256",
@@ -899,32 +1143,39 @@ const deployedContracts = {
               type: "uint256",
             },
             {
-              internalType: "uint256",
-              name: "_millWeight",
-              type: "uint256",
-            },
-          ],
-          name: "millBatch",
-          outputs: [],
-          stateMutability: "nonpayable",
-          type: "function",
-        },
-        {
-          inputs: [
-            {
-              internalType: "uint256",
-              name: "_batchId",
-              type: "uint256",
-            },
-            {
               internalType: "enum CoffeeTracker.ProcessingMethod",
               name: "_processingMethod",
               type: "uint8",
             },
             {
               internalType: "uint256",
-              name: "_moistureContent",
+              name: "_processingBeforeWeight",
               type: "uint256",
+            },
+            {
+              internalType: "uint256",
+              name: "_processingAfterWeight",
+              type: "uint256",
+            },
+            {
+              internalType: "uint8",
+              name: "_moistureContent",
+              type: "uint8",
+            },
+            {
+              internalType: "uint8",
+              name: "_scaScore",
+              type: "uint8",
+            },
+            {
+              internalType: "uint8",
+              name: "_humidity",
+              type: "uint8",
+            },
+            {
+              internalType: "uint16",
+              name: "_dryTemperature",
+              type: "uint16",
             },
           ],
           name: "processBatch",
@@ -976,14 +1227,29 @@ const deployedContracts = {
               type: "uint256",
             },
             {
+              internalType: "enum CoffeeTracker.RoastingMethod",
+              name: "_roastingMethod",
+              type: "uint8",
+            },
+            {
               internalType: "uint256",
-              name: "_roastingWeight",
+              name: "_roastingBeforeWeight",
               type: "uint256",
             },
             {
               internalType: "uint256",
-              name: "_scaScore",
+              name: "_roastingAfterWeight",
               type: "uint256",
+            },
+            {
+              internalType: "enum CoffeeTracker.RoastLevel",
+              name: "_roastLevel",
+              type: "uint8",
+            },
+            {
+              internalType: "uint16",
+              name: "_transportTime",
+              type: "uint16",
             },
           ],
           name: "roastBatch",
@@ -1143,7 +1409,7 @@ const deployedContracts = {
         renounceRole: "@openzeppelin/contracts/access/AccessControl.sol",
         revokeRole: "@openzeppelin/contracts/access/AccessControl.sol",
       },
-      deployedOnBlock: 1,
+      deployedOnBlock: 11,
     },
   },
   84532: {
